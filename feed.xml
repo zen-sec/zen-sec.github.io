@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[zensec]]></title><description><![CDATA[zensec]]></description><link>http://zen-sec.github.io</link><generator>RSS for Node</generator><lastBuildDate>Mon, 10 Apr 2017 12:03:55 GMT</lastBuildDate><atom:link href="http://zen-sec.github.io/feed.xml" rel="self" type="application/rss+xml"/><item><title><![CDATA[Extraire les mots de passes et autres informations depuis un heapdump Java]]></title><description><![CDATA[<p>À travers cet article, nous allons voir comment nous pouvons extraire des
+informations (pour le moins intéressantes) depuis une empreinte mémoire d'une
+application Java.</p>
+<blockquote>
+<p>Si vous disposez déjà d’une empreinte mémoire, vous pouvez aller directement
+à la <a href="#seconde-partie--extraction-des-donn%C3%A9es-int%C3%A9ressantes">seconde partie</a>.</p>
+</blockquote>
+<blockquote>
+<p>Pour réaliser ces manipulations, vous aurez besoin du <strong>JDK</strong>.
+Nous supposons ainsi que les outils <em>jps</em>, <em>jmap</em>, <em>jhat</em> du JDK sont
+accessibles en ligne de commande.</p>
+</blockquote>
+<hr>
+<h2 id="première-partie--prélèvement-de-lempreinte-mémoire"><a href="#premi%C3%A8re-partie--pr%C3%A9l%C3%A8vement-de-lempreinte-m%C3%A9moire" class="phenomic-HeadingAnchor">#</a>Première partie : Prélèvement de l’empreinte mémoire</h2>
+<h3 id="0-lancement-de-lapplication"><a href="#0-lancement-de-lapplication" class="phenomic-HeadingAnchor">#</a>0. Lancement de l'application</h3>
+<p>Pour cet exemple, nous allons prendre le cas d’une application Spring.</p>
+<p>L’application est lancée avec un fichier de configuration
+<em>application.properties</em> à partir d’un <em>snapshot.jar</em></p>
+<pre><code class="hljs language-cmd">java -jar snapshot.jar --spring.config.location=src/main/resources/conf/application.properties</code></pre>
+<h3 id="1-récupération-du-pid"><a href="#1-r%C3%A9cup%C3%A9ration-du-pid" class="phenomic-HeadingAnchor">#</a>1. Récupération du PID</h3>
+<p>Dans notre cas, Spring Boot nous affiche directement le PID, mais dans le
+cas général nous pouvons nous servir de l’utilitaire <em>jps</em> contenu dans le jdk.</p>
+<pre><code class="hljs language-cmd">jps -mlv</code></pre>
+<p>Nous obtenons la liste des processus s'exécutant dans la JVM.</p>
+<p>Jps propose les options suivantes :</p>
+<ul>
+<li>-m : Affiche les arguments du processus</li>
+<li>-l : La localisation complète</li>
+<li>-v : Les arguments ajoutées à la JVM</li>
+<li>-q : Seulement les PID</li>
+</ul>
+<h3 id="2-prise-de-lempreinte-mémoire"><a href="#2-prise-de-lempreinte-m%C3%A9moire" class="phenomic-HeadingAnchor">#</a>2. Prise de l'empreinte mémoire</h3>
+<p>Maintenant que nous avons le PID du processus, nous allons pouvoir réaliser
+un 'live dump' grâce à l’utilitaire <em>jmap</em></p>
+<pre><code class="hljs language-cmd">jmap -dump:live,<span class="hljs-built_in">format</span>=b,file=/tmp/heap.dump <span class="hljs-number">1337</span></code></pre>
+<ul>
+<li><strong><em>1337</em></strong> est a remplacer par votre PID</li>
+<li><strong><em>/tmp/heap.dump</em></strong> est le chemin et le nom de fichier qui sera créée
+(l’extension est au choix, ainsi que le répertoire de destination
+et le nom du fichier)</li>
+</ul>
+<blockquote>
+<p><strong>Attention, la taille de votre empreinte mémoire dépend de votre application
+et peut être très (très) volumineuse !</strong></p>
+</blockquote>
+<hr>
+<h2 id="seconde-partie--extraction-des-données-intéressantes"><a href="#seconde-partie--extraction-des-donn%C3%A9es-int%C3%A9ressantes" class="phenomic-HeadingAnchor">#</a>Seconde partie : Extraction des données intéressantes</h2>
+<p>Bien, maintenant que nous disposons d’un fichier d’empreinte, nous allons
+pouvoir commencer à extraire les informations croustillantes !</p>
+<p>Pour cela nous allons nous appuyer sur l’utilitaire <em>jhat</em> qui va nous
+permettre de lire le dump mémoire et qui nous propose d’exécuter des requêtes
+OQL (Object Query Language) afin de récuperer des objets en particulier</p>
+<pre><code class="hljs language-cmd">jhat -port <span class="hljs-number">7401</span> -J-Xmx4G /tmp/heap.dump</code></pre>
+<ul>
+<li>le port <strong><em>7401</em></strong> sera le port où le service web de jhat tournera
+(choisissez un port de disponible :)</li>
+<li><strong><em>/tmp/heap.dump</em></strong> est le chemin vers le fichier d'empreinte mémoire</li>
+</ul>
+<p>À présent vous pouvez vous rendre sur <a href="http://localhost:7401/">http://localhost:7401/</a> pour apercevoir
+une liste de toutes les classes Java de votre application.</p>
+<p>Mais ce n’est pas ce qui nous intéresse, la partie intéressante se trouve sur
+la page <a href="http://localhost:7401/oql/">http://localhost:7401/oql/</a></p>
+<p>Cette page permet d’exécuter des requêtes OQL pour extraire ce qui nous intéresse.</p>
+<hr>
+<h3 id="1-le-cas-dune-application-spring"><a href="#1-le-cas-dune-application-spring" class="phenomic-HeadingAnchor">#</a>1.	Le cas d’une application Spring</h3>
+<p>Dans notre exemple, nous avons pris le cas d’une application Spring avec un
+fichier de configuration <em>application.properties</em></p>
+<p>Voici le contenu de notre fichier :</p>
+<pre><code class="hljs language-x"><span class="hljs-comment"># Database Configuration</span>
+datasource.<span class="hljs-attr">driver</span> = org.postgresql.Driver
+datasource.<span class="hljs-attr">url</span> = jdbc:postgresql://localhost:<span class="hljs-number">1234</span>/test
+datasource.<span class="hljs-attr">username</span> = postgresUSERNAME
+datasource.<span class="hljs-attr">password</span> = postgresPASSWORD
+
+<span class="hljs-comment"># Security</span>
+management.security.enabled: <span class="hljs-literal">true</span>
+security.basic.enabled: <span class="hljs-literal">true</span>
+security.user.<span class="hljs-attr">login</span> = this_is_the_user_login
+security.user.<span class="hljs-attr">password</span> = this_is_the_user_password
+security.admin.<span class="hljs-attr">login</span> = this_is_the_admin_login
+security.admin.<span class="hljs-attr">password</span> = this_is_the_admin_password
+
+endpoints.enabled: <span class="hljs-literal">false</span>
+
+endpoints.shutdown.id: shutdown
+endpoints.shutdown.sensitive: <span class="hljs-literal">true</span>
+endpoints.shutdown.enabled: <span class="hljs-literal">true</span>
+
+endpoints.health.id: health
+endpoints.health.sensitive: <span class="hljs-literal">false</span>
+endpoints.health.enabled: <span class="hljs-literal">true</span>
+
+<span class="hljs-comment"># File max size</span>
+spring.http.multipart.<span class="hljs-attr">max-file-size=5MB</span></code></pre>
+<h4 id="comment-ces-données-sont-gérées-"><a href="#comment-ces-donn%C3%A9es-sont-g%C3%A9r%C3%A9es-" class="phenomic-HeadingAnchor">#</a>Comment ces données sont gérées ?</h4>
+<h5 id="version-courte"><a href="#version-courte" class="phenomic-HeadingAnchor">#</a>Version courte</h5>
+<p>Ces données sont stockées sous forme de <em>String</em> dans une classe
+<em>org.springframework.core.env.PropertiesPropertySource</em></p>
+<h5 id="version-complète"><a href="#version-compl%C3%A8te" class="phenomic-HeadingAnchor">#</a>Version complète</h5>
+<p>Voici un schéma de qualité :</p>
+<p><img src="/assets/java-heapdump-extractor(1).png" alt="schéma tout moche"></p>
+<h4 id="comment-je-peux-les-extraire-de-mon-dump-"><a href="#comment-je-peux-les-extraire-de-mon-dump-" class="phenomic-HeadingAnchor">#</a>Comment je peux les extraire de mon dump ?</h4>
+<p>Pas de panique, voici la requête pour extraire les informations :</p>
+<pre><code class="hljs language-js">select
+ filter(
+  map(pps.source.table,
+    <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">it</span>) </span>{
+      <span class="hljs-keyword">if</span>(it != <span class="hljs-literal">null</span>)
+        <span class="hljs-keyword">return</span> it.key.toString() + <span class="hljs-string">' = '</span> + it.value.toString();
+    }
+  ),
+  <span class="hljs-string">"it != null"</span>
+ )
+<span class="hljs-keyword">from</span> org.springframework.core.env.PropertiesPropertySource pps</code></pre>
+<p>Et le lien <em>ready to eat</em> : <a href="http://localhost:7401/oql/?query=select+filter(map(pps.source.table%252Cfunction(it)%7Bif(it!%253Dnull)return+it.key.toString()%252B&#x27;+%253D+&#x27;%252Bit.value.toString()%253B%7D)%252C%22it!%253Dnull%22)+from+org.springframework.core.env.PropertiesPropertySource+pps">http://localhost:7401/oql/?query=select+filter%28map%28pps.source.table%2Cfunction%28it%29%7Bif%28it%21%3Dnull%29return+it.key.toString%28%29%2B%27+%3D+%27%2Bit.value.toString%28%29%3B%7D%29%2C%22it%21%3Dnull%22%29+from+org.springframework.core.env.PropertiesPropertySource+pps</a></p>
+<p><img src="/assets/java-heapdump-extractor(4).png" alt="résultat"></p>
+<h4 id="je-veux-comprendre-la-requête-"><a href="#je-veux-comprendre-la-requ%C3%AAte-" class="phenomic-HeadingAnchor">#</a>Je veux comprendre la requête !</h4>
+<blockquote>
+<p>Comme vous l’avez vu sur le schéma de qualité, la classe
+<em>PropertiesPropertySource</em> posséde un champ <em>source</em> possédant un champ
+<em>table</em> que nous parcourons grâce à la fonction <em>map</em>
+(cette fonction permet d'effectuer une action <em>function(it)</em> sur chaque objet
+contenu dans l’objet en paramètre)</p>
+</blockquote>
+<blockquote>
+<p>La fonction filter nous sert à éliminer les champs vides</p>
+</blockquote>
+<hr>
+<h3 id="2-le-cas-général"><a href="#2-le-cas-g%C3%A9n%C3%A9ral" class="phenomic-HeadingAnchor">#</a>2. Le cas général</h3>
+<p>Dans le cas d'une application quelconque (Spring inclus),
+nous souhaitons extraire des champs du type <em>password</em> et autre.</p>
+<p>Pour cela, voici la requête qui récupère tous les champs intéressants :</p>
+<pre><code class="hljs language-js">select filter(map(
+  map(filter(heap.classes(), <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">it</span>) </span>{
+    <span class="hljs-keyword">var</span> interests = <span class="hljs-regexp">/login|password|username|database|creds|credential|p4ss|l0g1n|l0gin|us3r|admin|4dm1n/</span>;
+
+    <span class="hljs-keyword">for</span>(field <span class="hljs-keyword">in</span> it.fields)     
+      <span class="hljs-keyword">if</span>(interests.test(it.fields[field].name.toLowerCase())) <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+  }), <span class="hljs-string">"heap.objects(it, true)"</span>), <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">it</span>) </span>{
+    <span class="hljs-keyword">var</span> res = <span class="hljs-string">""</span>;
+    <span class="hljs-keyword">var</span> interests = <span class="hljs-regexp">/login|password|username|database|creds|credential|p4ss|l0g1n|l0gin|us3r|admin|4dm1n/</span>;
+
+    <span class="hljs-keyword">while</span> (it.hasMoreElements()) {
+      it = it.nextElement();
+      <span class="hljs-keyword">for</span>(field <span class="hljs-keyword">in</span> it) {
+        <span class="hljs-keyword">if</span>(interests.test(field.toLowerCase())) {
+          <span class="hljs-keyword">if</span>(res !== <span class="hljs-string">''</span>)
+            res += <span class="hljs-string">', '</span>;
+          res += field + <span class="hljs-string">' : '</span> + (it[field] ? (it[field].value ?
+              it[field].value.toString() : it[field].toString()) : it[field]);
+        }
+      }
+    }
+    <span class="hljs-keyword">return</span> res;
+  }), <span class="hljs-string">"it"</span>);</code></pre>
+<p>Et le résultat :
+<img src="/assets/java-heapdump-extractor(2).png" alt="résultat"></p>
+<h4 id="cest-génial--mais-comment-ça-marche-"><a href="#cest-g%C3%A9nial--mais-comment-%C3%A7a-marche-" class="phenomic-HeadingAnchor">#</a>C'est génial ! Mais comment ça marche ?</h4>
+<p>Dans notre petite application Spring, nous avions 347000 objets (= instances)
+dans notre dump. Faire un tri sur les objets est donc tout juste impossible.</p>
+<p>La solution consiste à récupérer toutes les classes disponibles et de trier
+celles comportant des attributs du type :</p>
+<p><em>Login, password, username, database, credential…</em></p>
+<blockquote>
+<p>Vous retrouverez ces mots clefs dans une <em>expression régulière</em> que vous
+pouvez bien sûr personnaliser !
+(Attention, vous pouvez vite vous retrouver avec beaucoup trop d’objets !)</p>
+</blockquote>
+<p>Enfin, on récupère toutes les instances de ces classes, en n’affichant que les
+champs que l’on trouve intéressants</p>
+<hr>
+<h3 id="3-les-mots-de-passes-sont-dans-des-champs-static-comment-je-fais-"><a href="#3-les-mots-de-passes-sont-dans-des-champs-static-comment-je-fais-" class="phenomic-HeadingAnchor">#</a>3. Les mots de passes sont dans des champs <em>static</em> comment je fais ?</h3>
+<p>Pas de soucis, voici une requête qui fera le <em>taf</em></p>
+<pre><code class="hljs language-js">select filter(
+  map(filter(heap.classes(), <span class="hljs-string">"it.statics"</span>),
+    <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">it</span>) </span>{
+      <span class="hljs-keyword">var</span> res = <span class="hljs-string">''</span>;
+      <span class="hljs-keyword">var</span> interests = <span class="hljs-regexp">/login|password|username|database|creds|credential|p4ss|l0g1n|l0gin|us3r|admin|4dm1n/</span>;
+      <span class="hljs-keyword">for</span> (field <span class="hljs-keyword">in</span> it.statics) {
+        <span class="hljs-keyword">if</span>(interests.test(field.toLowerCase())) {
+          <span class="hljs-keyword">if</span>(res !== <span class="hljs-string">''</span>)
+            res += <span class="hljs-string">', '</span>;
+          res += field + <span class="hljs-string">' : '</span> + it.statics[field].toString();
+        }
+      }
+      <span class="hljs-keyword">return</span> res;
+    }
+  ), <span class="hljs-string">"it"</span>);</code></pre>
+<blockquote>
+<p>Pas de secrets, on récupère les classes avec des champs statics, et on trie
+celles avec des noms de champs intéressants !  </p>
+</blockquote>
+<p><img src="/assets/java-heapdump-extractor(3).png" alt="résultat"></p>
+<hr>
+<h2 id="partie-bonus--metasploit-post-module"><a href="#partie-bonus--metasploit-post-module" class="phenomic-HeadingAnchor">#</a>Partie bonus : Metasploit Post Module</h2>
+<p>Vous avez un accès à un shell avec le JDK d’installé et une application java qui tourne ?</p>
+<p>Voici le module qui fera tout cela pour vous !</p>
+<p><a href="https://asciinema.org/a/108492?speed=2.5"><img src="https://asciinema.org/a/108492.png" alt="asciicast"></a></p>
+<hr>
+<blockquote>
+<p><strong> Merci d’avoir lu cet article ! N'hésitez pas à soumettre vos suggestions 
+dans les commentaires ;)</strong></p>
+</blockquote>
+]]></description><link>http://zen-sec.github.io/fr/java-heapdump-extraction/</link><guid isPermaLink="true">http://zen-sec.github.io/fr/java-heapdump-extraction/</guid><pubDate>Thu, 23 Mar 2017 00:00:00 GMT</pubDate></item><item><title><![CDATA[Extract passwords and other interesting fields from the Java heap]]></title><description><![CDATA[<p>Not Yet</p>
+]]></description><link>http://zen-sec.github.io/eng/java-heapdump-extraction/</link><guid isPermaLink="true">http://zen-sec.github.io/eng/java-heapdump-extraction/</guid><pubDate>Thu, 23 Mar 2017 00:00:00 GMT</pubDate></item></channel></rss>

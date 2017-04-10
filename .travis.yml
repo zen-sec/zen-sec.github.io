@@ -1,0 +1,15 @@
+language: node_js
+node_js:
+  - '6'
+deploy:
+  skip_cleanup: true
+  provider: script
+  script: ./scripts/deploy.sh
+  'on':
+    branch: src
+    node: '6'
+env:
+  global:
+    - secure: >-
+        5F6u9lr3qdmhDUcJ5FbRNx79//IohiFOX6yV42l92T1ceWdgVMo/aAeG/Tn57U7lyLNJndFXIWZ8UtMJeQ5dexQxQ9EbukwDNCWS39N+hR142dyPPnMq0bceHa9df8GIzJ0tUJXHbaysnHrXWRec915EE3ni/zgG5iFGMhcbVlgyghjK4SXqNT0pOMJppqKSdA67lW6f/FIzGhDdGaXPaidwjRDFfUpiR/S90wYBVueyqnb8PzncrTEAHz/pVrgckBBrSdPcuN/6usx1qORQwqVCzLoIaWvRkCtdKOtWOgeYLnrasG8JrJBdgS/Vaod7nNqXNnApVwOMHX49z7Yw5jAC0o0sUwJLmThkXLJ2vM0cEkNlaqwUCC7o1ExOeswpYOX+FVVro32ZaMVZVKdG6tN4HnaEVI7xXVsVlbtGhbRfuDShgKJyoyah1a+nWyqlY6XH+Lp1BYF+qfqAVwSG69E6ZrfSw0MczEqg/1vNfn4SrrmKu/unMRuIVbJ7s2Gxc5r6yZAaJTNVjDrpLUJvA5qAiWL8uE9towlv/eQezIsu8qFyabV8fXbF4apzgyLjUX8tZi34KJ+CiuWDCoriCJi39GV8SsANv+gSvkX1qTtCieRpCRrgtreyyYaOO7xfopzZVU8i0G0IAhjeg4OpQ5PMHPLIFiLI0Cdx+nJNTeM=
+    - GIT_DEPLOY_REPO=https://$GITHUB_TOKEN@github.com/zen-sec/zen-sec.github.io.git

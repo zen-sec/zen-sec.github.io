@@ -13,12 +13,12 @@
     "build": "phenomic build",
     "pretest": "npm run lint",
     "test": "npm run build",
-    "predeploy": "npm run build",
-    "deploy": "./scripts/deploy.sh"
+    "deploy": "./scripts/deploy.sh",
+    "imagemin": "./node_modules/.bin/imagemin content/assets/* --out-dir=content/assets"
   },
   "googleAnalytics": "UA-96167387-1",
   "phenomic": {
-    "CNAME": true
+    "CNAME": false
   },
   "#babel": "webpack-(development|production) are useful for webpack 2, otherwise use development|production",
   "babel": {
@@ -114,6 +114,7 @@
     "history": "^2.0.0",
     "json-loader": "^0.5.2",
     "npm-run-all": "^1.7.0",
+    "phenomic": "^0.20.4",
     "postcss-browser-reporter": "^0.4.0",
     "postcss-cssnext": "^2.4.0",
     "postcss-loader": "^0.13.0",
@@ -132,8 +133,7 @@
     "stylelint": "^7.2.0",
     "warning": "^3.0.0",
     "webpack": "^1.11.0",
-    "whatwg-fetch": "^0.11.0",
-    "phenomic": "^0.20.4"
+    "whatwg-fetch": "^0.11.0"
   },
   "dependencies": {
     "react-disqus-thread": "^0.4.0",
